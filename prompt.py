@@ -100,25 +100,15 @@ def extract_model_answer(model_output: str) -> str:
     '숫자. 단어 집합 내용' 형식의 정답 문장만 추출하여 반환합니다.
     """
     
-    # 1. 응답 텍스트를 줄 단위로 분리합니다.
     lines = model_output.strip().split('\n')
-    
-    # 2. 각 줄을 순회하며 정답 형식(숫자. 으로 시작)을 찾습니다.
-    # 정규 표현식: ^\s*(\d+\.)\s*.*$
-    #   - ^\s* : 문자열 시작 부분의 공백을 허용
-    #   - (\d+\.) : 하나 이상의 숫자와 마침표(예: 0., 1., 2.)를 찾습니다.
-    #   - \s*.*$ : 뒤따르는 공백과 모든 문자열을 포함합니다.
+
     answer_pattern = re.compile(r'^\s*(\d+\.)\s*.*$', re.MULTILINE | re.DOTALL)
     
     for line in lines:
             
-        # 정규 표현식 패턴과 일치하는지 확인합니다.
         if answer_pattern.match(line):
-            # 패턴에 맞는 첫 번째 줄을 찾았으므로, 해당 줄을 그대로 반환합니다.
-            # 이 줄에는 정답 번호와 단어 집합 내용이 모두 포함되어 있습니다.
             return line.strip()
             
-    # 정답 형식을 찾지 못했을 경우
     return None
 
 
