@@ -2,11 +2,8 @@ from dotenv import load_dotenv
 import os
 import prompt
 
-import runpod
-
 load_dotenv()
 
-runpod.api_key = os.getenv('RUNPOD_API_KEY')
 pod_id = os.getenv("POD_ID")
 
 
@@ -25,6 +22,7 @@ for _ in range(3):  # 각 플레이어마다 3장씩 이미지를 나눠줌
         players[f"Player{i+1}"].add(card)
 
 while True:
+    print(f"--- 턴 {turn_number} ---")
     for key in players:
         turn_number += 1
         turn_player = key
@@ -53,14 +51,15 @@ while True:
 
             turn_cards[other] = [selected_card, 0]
 
-        print(turn_cards, '\n')
+        for k, v in turn_cards.items():
+            print(f"{k} : {v[0][1]}")
 
         # voting : 함수에서는 가장 유사한 곳에 투표 후, 해당 플레이어가 turn player 면 자신의 voting에 +3
         for other in other_players:
             if other == "Player1":
                 turn_cards = prompt.player_voting(turn_cards, turn_player, other)
             else : 
-                turn_cards = prompt.ai_voting(turn_cards, turn_player, other)
+                turn_cards = prompt.ai_voting(turn_cards, turn_player, other, description)
 
         if turn_cards[turn_player][1] == 5 :
             for other in other_players:
