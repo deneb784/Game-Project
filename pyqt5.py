@@ -30,6 +30,7 @@ RUNPOD_OLLAMA_URL = f"https://{POD_ID}-11434.proxy.runpod.net"
 
 
 # --- 이미지 및 키워드 ---
+
 image_text = {
     ("1.png", "여자, 아이, 바이올린, 음표, 꽃, 나무, 바닥, 오선지, 음악, 옷, 노래"),
     ("2.png", "여자, 노파, 백발, 앞치마, 꽃, 아이, 머리, 빨강, 화분"),
@@ -136,7 +137,6 @@ image_text = {
     ("106.png", "까마귀, 밤, 낮, 들판, 풍경, 달, 별, 은하수, 견우와 직녀"),
     ("107.png", "촛불, 양초, 촛농, 꺼지다, 비교"),
     ("108.png", "물고기, 금붕어, 무리, 불꽃, 헤엄치다"),
-
 }
 
 # --- 스레드 ---
@@ -215,6 +215,18 @@ class ClickableCard(QLabel):
         else:
             self.setStyleSheet(self.normal_style)
 
+class QSS():
+    MAIN_STYLE = """
+        QWidget {
+            border-image: url('styles/carpet_background.jpg') 0 0 0 0 stretch stretch;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+    """
+    TITLE_IMAGE = """ 
+            background-image: url('styles/main_background.jpg'); 
+            background-position: center;
+    """
 
 # --- 메인 실행 화면 ---
 
@@ -224,14 +236,15 @@ class GameWindow(QMainWindow):
         self.setWindowTitle("Dixit")
         self.setGeometry(300, 300, 1200, 1200)
 
-        # Ollama 클라이언트 초기화
-        try:
-            self.ollama_client = ollama.Client(host=RUNPOD_OLLAMA_URL)
-            # 클라이언트 테스트
-            self.ollama_client.list() 
-        except Exception as e:
-            QMessageBox.critical(self, "Ollama 연결 오류", f"Ollama 호스트({RUNPOD_OLLAMA_URL})에 연결할 수 없습니다. .env 파일과 RunPod 상태를 확인하세요.\n오류: {e}")
-            sys.exit(1)
+        self.ollama_client = None
+        # # Ollama 클라이언트 초기화
+        # try:
+        #     self.ollama_client = ollama.Client(host=RUNPOD_OLLAMA_URL)
+        #     # 클라이언트 테스트
+        #     self.ollama_client.list() 
+        # except Exception as e:
+        #     QMessageBox.critical(self, "Ollama 연결 오류", f"Ollama 호스트({RUNPOD_OLLAMA_URL})에 연결할 수 없습니다. .env 파일과 RunPod 상태를 확인하세요.\n오류: {e}")
+        #     sys.exit(1)
 
         self.threadpool = QThreadPool()
         self.init_ui()
@@ -241,6 +254,7 @@ class GameWindow(QMainWindow):
     def init_ui(self):
         # UI 기본 레이아웃 설정
         main_widget = QWidget()
+        main_widget.setStyleSheet(QSS.MAIN_STYLE)
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
 
@@ -248,11 +262,27 @@ class GameWindow(QMainWindow):
         self.scoreboard_layout = QHBoxLayout()
         main_layout.addLayout(self.scoreboard_layout)
         
+        # 이미지/제목 영역을 위한 컨테이너 위젯 (선택 사항이지만 구조를 깔끔하게 만듦)
+        self.title_image_widget = QWidget()
+        self.title_image_widget.setFixedHeight(150) # 이미지 영역 높이 지정
+        main_layout.addWidget(self.title_image_widget)
+        
+        title_image_layout = QVBoxLayout(self.title_image_widget)
+        
+        # 이미지 제목 라벨
+        self.game_title_label = QLabel("")
+        self.game_title_label.setAlignment(Qt.AlignCenter)
+        self.game_title_label.setFont(QFont("Arial", 20, QFont.ExtraBold))
+        self.game_title_label.setStyleSheet(QSS.TITLE_IMAGE)
+        
+        title_image_layout.addWidget(self.game_title_label)
+        # -----------------------------------------------------------------------------------
+
         # 2. 게임 상태 및 로그
-        status_layout = QHBoxLayout()
+        status_layout = QHBoxLayout() # 이 변수는 아래에서 사용되지 않으므로 제거하거나 그대로 둘 수 있습니다.
         self.status_label = QLabel("게임을 시작합니다...")
         self.status_label.setFont(QFont("Arial", 14, QFont.Bold))
-        status_layout.addWidget(self.status_label)
+        # status_layout.addWidget(self.status_label) # 이 부분은 아래 status_vlayout에 포함됨
         
         self.log_display = QTextEdit()
         self.log_display.setReadOnly(True)
@@ -610,7 +640,7 @@ class GameWindow(QMainWindow):
             self.log(f"{player_key}가 AI 오류로 랜덤 카드를 제출합니다: {selected_card[0]}")
         else:
             self.players[player_key].remove(selected_card)
-            self.log(f"{player_key}가 카드를 제출했습니다: {selected_card[0]}")
+            self.log(f"{player_key}가 카드를 제출했습니다.")
 
         self.turn_cards[player_key] = [selected_card, 0]
         self.check_all_cards_submitted()
@@ -708,14 +738,38 @@ class GameWindow(QMainWindow):
                 "role": "system",
                 "content": """
                 너는 게임 문제를 맞추는 전문 분류기(Classifier)야.
-                '설명 문장'에 **가장 의미론적으로 잘 맞는** 단어 집합 하나를 '단어 집합 목록'에서 **선택**해야 해.
+                
+                사용자로부터 다음 두 가지 입력을 받을 거야:
+                1. '설명 문장': 문제를 풀기 위한 핵심 문장.
+                2. '단어 집합 목록': **(파일명, 단어들)** 형식으로 구성된, 정답 후보 목록.
+                
+                너의 목표는 '설명 문장'에 **가장 의미론적으로 잘 맞는** 단어 집합 하나를 '단어 집합 목록'에서 **선택**하는 거야.
                 
                 ### 제약 조건 및 출력 형식 ###
                 1. **반드시 방금 받은 '단어 집합 목록' 내에서만 선택해야 해.**
                 2. **다른 문장, 설명, 주석 없이 오직 선택된 집합의 파일 이름과 그 내용만** 반환해야 해.
                 3. **출력의 첫 글자는 무조건 선택된 집합의 파일 이름(예: 1.png)이 되어야 해.**
                 4. 출력 형식은 다음과 같아:
-                `[선택된 집합의 파일 이름] : [선택된 집합의 단어 내용 전체]`
+                ```
+                [선택된 집합의 파일 이름] : [선택된 집합의 단어 내용 전체]
+                ```
+                
+                ### 예시 입력 및 출력 형식 (최종 목표) ###
+                
+                **사용자 입력 예시:**
+                ```
+                설명 문장 : 구름은 조각가였고, 하늘은 아직 다듬어지지 않은 돌이었다.
+                
+                단어 집합 목록 : 
+                1.png : 여자, 아이, 바이올린, 음표, ...
+                2.png : 여자, 노파, 백발, 앞치마, ...
+                3.png : 용, 기사, 칼, 아이, 파랑, ...
+                ```
+
+                **너의 출력 (예시):**
+                ```
+                1.png : 여자, 아이, 바이올린, 음표, 꽃, 나무, 바닥, 오선지, 음악, 옷, 노래
+                ```
                 """
             },
             {
@@ -916,12 +970,17 @@ class GameWindow(QMainWindow):
             {
                 'role' : 'system',
                 'content' : """ 
-                너는 게임 문제를 내는 사람이야.
-                다음 단어들 중 일부와 관련있는 Dixit 스타일의 모호하고 추상적인 한 문장을 만들어줘.
-                문장은 짧아야 하고, 중간에 ,는 두개 이상 들어가지 않도록 해.
+                너는 **꿈이나 감정을 묘사하는 시인**이야.
+                제시된 단어들에서 받은 **느낌이나 상징성**을 포착해서, **매우 모호하고 은유적인** 한 문장으로 표현해줘.
+                
+                ### 제약 조건 ###
+                1. 문장은 **매우 짧아야 해.** (예: 10단어 내외)
+                2. **제시된 단어를 절대 직접 사용하면 안 돼.** (매우 중요)
+                3. 문장은 구체적인 이야기보다 '상태'나 '감정'처럼 느껴져야 해.
+                4. 콤마(,)는 1개 이하만 사용해.
 
                 단어 예시: 하늘, 망치, 조각, 예술, 새, 나비, 구름, 사다리, 남자
-                출력 예시: "조각가의 하늘은 아직 다듬어지지 않은 돌이었다."
+                출력 예시: "가장 무거운 것은 날개가 되기를 꿈꾼다."
                 """
             },
             {
@@ -980,14 +1039,38 @@ class GameWindow(QMainWindow):
                 "role": "system",
                 "content": """
                 너는 게임 문제를 맞추는 전문 분류기(Classifier)야.
-                '설명 문장'에 **가장 의미론적으로 잘 맞는** 단어 집합 하나를 '단어 집합 목록'에서 **선택**해야 해.
+                
+                사용자로부터 다음 두 가지 입력을 받을 거야:
+                1. '설명 문장': 문제를 풀기 위한 핵심 문장.
+                2. '단어 집합 목록': **(파일명, 단어들)** 형식으로 구성된, 정답 후보 목록.
+                
+                너의 목표는 '설명 문장'에 **가장 의미론적으로 잘 맞는** 단어 집합 하나를 '단어 집합 목록'에서 **선택**하는 거야.
                 
                 ### 제약 조건 및 출력 형식 ###
                 1. **반드시 방금 받은 '단어 집합 목록' 내에서만 선택해야 해.**
                 2. **다른 문장, 설명, 주석 없이 오직 선택된 집합의 파일 이름과 그 내용만** 반환해야 해.
                 3. **출력의 첫 글자는 무조건 선택된 집합의 파일 이름(예: 1.png)이 되어야 해.**
                 4. 출력 형식은 다음과 같아:
-                `[선택된 집합의 파일 이름] : [선택된 집합의 단어 내용 전체]`
+                ```
+                [선택된 집합의 파일 이름] : [선택된 집합의 단어 내용 전체]
+                ```
+                
+                ### 예시 입력 및 출력 형식 (최종 목표) ###
+                
+                **사용자 입력 예시:**
+                ```
+                설명 문장 : 구름은 조각가였고, 하늘은 아직 다듬어지지 않은 돌이었다.
+                
+                단어 집합 목록 : 
+                1.png : 여자, 아이, 바이올린, 음표, ...
+                2.png : 여자, 노파, 백발, 앞치마, ...
+                3.png : 용, 기사, 칼, 아이, 파랑, ...
+                ```
+
+                **너의 출력 (예시):**
+                ```
+                1.png : 여자, 아이, 바이올린, 음표, 꽃, 나무, 바닥, 오선지, 음악, 옷, 노래
+                ```
                 """
             },
             {
