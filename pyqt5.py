@@ -7,13 +7,19 @@ import ollama
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-    QLabel, QPushButton, QLineEdit, QScrollArea, QGridLayout, 
+    QLabel, QPushButton, QLineEdit, QScrollArea, 
     QMessageBox, QTextEdit, QFrame
 )
 from PyQt5.QtGui import QPixmap, QFont
-from PyQt5.QtCore import Qt, pyqtSignal, QObject, QThread, QRunnable, QThreadPool, QSize
+from PyQt5.QtCore import Qt, pyqtSignal, QObject, QThread, QRunnable, QThreadPool
 
-# --- .env 및 환경 변수 로드 ---
+""" 
+사용하기 전 runpod을 통해 ollama와 연결 후 사용
+"""
+
+
+# --- 환경 변수 로드 ---
+
 load_dotenv()
 POD_ID = os.getenv("POD_ID")
 if not POD_ID:
@@ -22,41 +28,118 @@ if not POD_ID:
 
 RUNPOD_OLLAMA_URL = f"https://{POD_ID}-11434.proxy.runpod.net"
 
-# --- 이미지 및 키워드 데이터 ---
+
+# --- 이미지 및 키워드 ---
 image_text = {
     ("1.png", "여자, 아이, 바이올린, 음표, 꽃, 나무, 바닥, 오선지, 음악, 옷, 노래"),
-    ("2.png", "남자, 강아지, 공원, 나무, 산책, 햇살, 웃음, 모자, 셔츠, 운동화"),
-    ("3.png", "자동차, 도로, 신호등, 건물, 하늘, 구름, 도심, 거리, 보행자, 가로수"),
-    ("4.png", "고양이, 창문, 햇빛, 실내, 책상, 컵, 소파, 장난감, 털, 쿠션"),
-    ("5.png", "꽃, 나비, 벌, 정원, 초록, 자연, 햇살, 잎, 물방울, 향기"),
-    ("6.png", "해변, 바다, 파도, 모래, 조개, 썬베드, 파라솔, 여름, 하늘, 바람"),
-    ("7.png", "아이, 장난감, 블록, 웃음, 방, 책, 바닥, 색깔, 모자, 공"),
-    ("8.png", "산, 나무, 등산, 트레킹, 배낭, 하이킹, 하늘, 길, 돌, 자연"),
-    ("9.png", "커피, 책, 노트북, 카페, 창문, 햇살, 의자, 탁자, 머그컵, 분위기"),
-    ("10.png", "자전거, 도로, 공원, 나무, 운동, 사람, 헬멧, 바람, 햇살, 거리"),
-    ("11.png", "우주, 별, 은하, 행성, 달, 천체, 망원경, 어둠, 신비, 밤하늘"),
-    ("12.png", "피아노, 악보, 연주, 손, 음악, 방, 의자, 조명, 음표, 연습"),
-    ("13.png", "강, 다리, 배, 물, 산, 나무, 하늘, 풍경, 평화, 자연"),
-    ("14.png", "스포츠, 축구, 공, 경기, 선수, 유니폼, 관중, 골, 경기장, 태클"),
-    ("15.png", "도서관, 책, 독서, 책장, 조명, 의자, 테이블, 공부, 지식, 학습"),
-    ("16.png", "음식, 피자, 치즈, 토마토, 접시, 식사, 나이프, 포크, 점심, 맛있다"),
-    ("17.png", "강아지, 고양이, 친구, 애완동물, 실내, 장난감, 귀여움, 털, 집, 행복"),
-    ("18.png", "바다, 해돋이, 파도, 모래, 조개, 하늘, 태양, 풍경, 여름, 휴식"),
-    ("19.png", "자동차, 도로, 터널, 불빛, 밤, 도시, 차선, 속도, 건물, 신호"),
-    ("20.png", "축제, 불꽃놀이, 밤하늘, 사람, 카메라, 사진, 즐거움, 음악, 빛, 도시"),
-    ("21.png", "음악, 기타, 콘서트, 관객, 무대, 조명, 공연, 노래, 연주, 열정"),
-    ("22.png", "산책, 강아지, 공원, 나무, 길, 햇살, 웃음, 운동, 자연, 행복"),
-    ("23.png", "눈, 겨울, 산, 나무, 눈사람, 스키, 얼음, 하늘, 추위, 하얀색"),
-    ("24.png", "카페, 커피, 케이크, 책, 의자, 테이블, 창문, 햇살, 여유, 분위기"),
-    ("25.png", "아이, 학교, 교실, 책, 연필, 공부, 친구, 칠판, 학습, 수업"),
-    ("26.png", "바다, 요트, 항구, 하늘, 바람, 물결, 여행, 풍경, 휴가, 파도"),
-    ("27.png", "산, 등산, 길, 배낭, 자연, 나무, 돌, 트레킹, 햇살, 풍경"),
-    ("28.png", "음악, 드럼, 연주, 무대, 공연, 조명, 소리, 열정, 관객, 리듬"),
-    ("29.png", "꽃, 정원, 나비, 벌, 식물, 자연, 색깔, 향기, 햇살, 평화"),
-    ("30.png", "책, 독서, 조명, 테이블, 커피, 의자, 지식, 학습, 집중, 분위기")
+    ("2.png", "여자, 노파, 백발, 앞치마, 꽃, 아이, 머리, 빨강, 화분"),
+    ("3.png", "용, 기사, 칼 , 아이, 파랑, 싸움, 날개"),
+    ("4.png", "비누, 방울, 무지개, 산, 행성, 꽃, 언덕, 들판, 아이, 여행, 밤"),
+    ("5.png", "하늘, 망치, 조각, 예술, 새, 나비, 구름, 사다리, 남자"),
+    ("6.png", "책, 요정, 빛, 난쟁이, 밤, 공부"),
+    ("7.png", "바벨탑, 천국의 계단, 구름, 계단, 숲, 달팽이, 하늘, 구름, 신"),
+    ("8.png", "풀, 파리지옥, 식충식물, 남자, 사람, 씨앗, 밭, 노을"),
+    ("9.png", "행성, 꼬치, 장난감, 주판, 밤, 별, 목성, 태양"),
+    ("10.png", "그림자, 세이렌, 토끼, 조명, 연극, 문, 방, 이상한 나라의 앨리스, 물고기"),
+    ("11.png", "가방, 망토, 괴물, 책, 물건, 물, 삼키다"),
+    ("12.png", "선물, 상자, 포장, 남자, 여자, 아이, 둘, 끈, 박스"),
+    ("13.png", "여자, 치마, 새장, 물고기, 그물, 어항, 머리, 바다"),
+    ("14.png", "가면, 얼굴, 화남, 슬픔, 웃음, 감정"),
+    ("15.png", "허수아비, 밀짚모자, 지팡이, 왕, 넥타이, 해바라기, 밭, 들판"),
+    ("16.png", "자유의 여신상, 촛불, 횃불, 손, 바다, 사람, 투모로우, 지구온난화"),
+    ("17.png", "음식, 식탁, 닭, 닭다리, 바베큐, 바나나, 칼, 식탁보, 만찬, 난장판"),
+    ("18.png", "가을, 단풍, 체스, 조명, 격자, 남녀, 소개팅, 만남, 대회"),
+    ("19.png", "행성, 남자, 노인, 의자, 음악, 트럼펫, 홀스트"),
+    ("20.png", "세이렌, 여자, 노을, 바다, 거인, 걸리버 여행기, 배, 범선, 여행, 섬, 여신"),
+    ("21.png", "망토, 비밀, 조직, 눈, 일루미나티, 집, 귀신, 모임"),
+    ("22.png", "개, 신사, 기팡이, 강아지, 동물, 안경, 양복, 시계"),
+    ("23.png", "딸기, 여자, 임신, 난쟁이, 쿠션, 컵, 과일"),
+    ("24.png", "비, 우산, 아빠, 딸, 돌, 길, 화살"),
+    ("25.png", "여자, 모자, 문신, 등, 수련, 지도, 가로등, 숲, 나비, 가부좌, 명상"),
+    ("26.png", "하늘, 섬, 공중, 구름, 종이, 식물, 물뿌리개, 남자, 여자, 아이"),
+    ("27.png", "쥐, 종이, 배, 종이배, 남자, 아이, 모자, 학사모, 물"),
+    ("28.png", "뼈, 화석, 공룡, 괴물, 두개골, 거대, 발굴"),
+    ("29.png", "여자, 귀신, 생머리, 아이, 악령, 영혼, 락, 밴드, 기타"),
+    ("30.png", "도시, 위, 물, 바다, 워터월드, 보트, 표류, 청년, 꽃"),
+    ("31.png", "오징어, 영국, 신사, 중절모, 넥타이, 콧수염, 포스터, 커피, 흑백"),
+    ("32.png", "잉크, 생물, 세포, 생명과학, 종이, 논문, 책상, 책"),
+    ("33.png", "달팽이, 거미줄, 나뭇잎, 울타리, 집, 마을, 물방울, 버섯, 애벌레"),
+    ("34.png", "연, 나무, 가족, 주말, 공원, 여행, 피크닉, 돗자리, 부모"),
+    ("35.png", "구름, 소라, 빵, 헤일로, 코코넛, 문양, 상형문자, 번개"),
+    ("36.png", "수박, 털실, 씨, 뜨개질, 늑대, 그림자, 손, 발톱, 조명"),
+    ("37.png", "고양이, 점성술, 스노우볼, 어항, 금붕어, 별, 예언, 마녀"),
+    ("38.png", "거미줄, 마루, 슈즈, 발레, 신발, 끈, 신발끈, 무용, 귀신"),
+    ("39.png", "워터월드, 표류, 상어, 폭풍, 항해, 조난, 음악가"),
+    ("40.png", "도깨비, 발자국, 들판, 조사, 괴물, 고대, 화석, 위험"),
+    ("41.png", "바다, 침대, 공주, 용왕, 물고기, 해파리, 공기, 방울, 용궁"),
+    ("42.png", "업, 성, 열기구, 하늘, 하울의 움직이는 성, 이동"),
+    ("43.png", "물방울, 섬, 무인도, 들판, 꽃, 비, 빗방울"),
+    ("44.png", "회전목마, 노을, 놀이공원, 괴물, 공룡, 태엽, 오르골, 아이들"),
+    ("45.png", "거인, 진격의 거인, 배낭, 집, 괴물, 도시, 먹다, 삼키다"),
+    ("46.png", "늑대, 양, 마리오네트, 흰색, 빨강, 연극, 행복"),
+    ("47.png", "모래시계, 아이, 할머니, 시간, 모래, 책상"),
+    ("48.png", "토끼, 기사, 문, 3개, 칼, 투구, 갑옷, 칼 "),
+    ("49.png", "원숭이, 충치, 꽹과리, 인형, 메이드, 잠옷, 저주"),
+    ("50.png", "뱀, 메두사, 과학자, 실험, 발표, 약품, 머리, 3개"),
+    ("51.png", "얼음, 과일, 괴물, 고대, 탐험가, 광대, 남극"),
+    ("52.png", "가면, 새, 나무, 풀, 열매, 보따리, 무도회"),
+    ("53.png", "돋보기, 나무, 마을, 집, 개미, 난쟁이, 걸리버 여행기"),
+    ("54.png", "사제, 바이올린, 괴물, 황금, 토벌, 마법사, 음악, 정신, 음표"),
+    ("55.png", "감옥, 환자, 독방, 침대, 죄수, 철창, 범죄"),
+    ("56.png", "곰, 인형, 여자, 아이, 흑인, 눈물, 청진지, 병, 마음, 상처"),
+    ("57.png", "우비, 무지개, 파도, 폭풍, 키, 배, 항해, 탐험, 아이"),
+    ("58.png", "풍선, 껌, 남자, 낮잠, 휴식, 들판, 풀밭, 하늘, 여유"),
+    ("59.png", "도깨비, 아저씨, 나무, 숲, 동굴, 아이, 납치, 유혹"),
+    ("60.png", "심장, 망치, 강철, 주조, 용광로, 제철소, 여자, 이별, 다짐"),
+    ("61.png", "노파, 마녀, 망토, 오렌지, 행성, 태양, 예언, 점성술"),
+    ("62.png", "낚시, 물고기, 아이, 모자, 바늘, 니모, 하늘, 헤엄"),
+    ("63.png", "여자, 흑인, 임신, 아이, 마루, 그림자, 엄마"),
+    ("64.png", "태양, 우산, 양산, 나그네, 햇살, 더위, 덥다"),
+    ("65.png", "연극, 노파, 아이, 무대, 막, 앞치마, 이야기"),
+    ("66.png", "문어, 괴물, 사이보그, 로봇, 조명, 잠수함, 무기, 전투"),
+    ("67.png", "외줄타기, 달, 서커스, 도시, ET, 자전거"),
+    ("68.png", "개구리, 공주, 모자, 왕비, 우산, 햇살, 비, 웅덩이, 의자, 앉다"),
+    ("69.png", "공주, 배우, 여자, 빨강, 드레스, 그림, 명화, 화가, 마리오네트, 조종하다"),
+    ("70.png", "가면, 여자, 본성, 성악설, 가죽, 위장, 철창, 인격, 인성, 드러내다"),
+    ("71.png", "남매, 아이, 남자, 여자, 늑대, 그림자, 헨젤과 그레텔"),
+    ("72.png", "노을, 가을, 노인, 지팡이, 낙엽, 나무, 은행잎, 산, 외로움, 걷다"),
+    ("73.png", "행성, 나무, 나무꾼, 도끼, 새, 구름, 베다, 열매"),
+    ("74.png", "칼, 피리, 여자, 여행, 가방, 나들이, 산, 들판, 이기어검"),
+    ("75.png", "달팽이, 풍차, 집, 들판, 기어가다, 바람"),
+    ("76.png", "도시, 호수, 겨울, 하늘, 유리, 깨지다, 천장"),
+    ("77.png", "토끼, 숲, 나무, 음악, 화살, 사냥꾼"),
+    ("78.png", "손, 지구, 지구본, 신, 헤일로, 환경, 전지전능"),
+    ("79.png", "새, 양탄자, 용, 독수리, 날다, 원주민, 인디언, 올가미, 알라딘"),
+    ("80.png", "유리, 물병, 비, 빗방울, 물, 풍경, 스노우볼"),
+    ("81.png", "숲, 나무, 공포, 의자, 레이스, 외로움"),
+    ("82.png", "손금, 수맥, 물, 돋보기, 흐름, 운명"),
+    ("83.png", "까마귀, 모래, 모래사장, 해변, 모래성, 남자, 선탠, 휴가, 여름"),
+    ("84.png", "가면, 경극, 중국, 여인, 상형문자, 카드, 운명"),
+    ("85.png", "방석, 만년필, 양탄자, 비행, 가격표, 새, 날다"),
+    ("86.png", "유니콘, 백마, 무지개, 다리, 넘다, 절벽"),
+    ("87.png", "괴물, 요정, 물고기, 이빨, 육식, 공룡"),
+    ("89.png", "촛불, 촛농, 밤, 양초, 분위기"),
+    ("90.png", "그릇, 눈, 지켜보다, 사냥감, 감시, 포크, 접시"),
+    ("92.png", "우산, 낙하산, 여자, 비, 밤, 달, 날다"),
+    ("93.png", "새, 역전, 날다, 하늘, 땅, 뒤집히다, 참새"),
+    ("94.png", "열기구, 탄산, 샴페인, 도시, 하늘, 터지다"),
+    ("95.png", "달, 여자, 아이, 계단, 포옹, 따뜻함"),
+    ("96.png", "여자, 남자, 얼굴, 착시, 갈매기, 중절모, 새장, 바다"),
+    ("97.png", "나무, 꽃, 마지막 잎새, 들판, 돌, 길"),
+    ("98.png", "알, 깨다, 사람, 박혁거세, 예술, 태초, 탄생, 인간"),
+    ("100.png", "사슴, 머리, 박제, 고양이, 벽, 액자, 방, 보다"),
+    ("101.png", "시계, 우주, 시간, 바늘, 없음, 무한"),
+    ("102.png", "도미노, 난쟁이, 어둠, 세우다, 무너지다"),
+    ("103.png", "칼, 덩굴, 풀, 자르다, 묶다"),
+    ("104.png", "깃털, 저울, 황금, 무게, 가격, 가치"),
+    ("105.png", "꼭두각시, 마리오네트, 의자, 목각인형"),
+    ("106.png", "까마귀, 밤, 낮, 들판, 풍경, 달, 별, 은하수, 견우와 직녀"),
+    ("107.png", "촛불, 양초, 촛농, 꺼지다, 비교"),
+    ("108.png", "물고기, 금붕어, 무리, 불꽃, 헤엄치다"),
+
 }
 
-# --- 스레드 작업자 클래스 ---
+# --- 스레드 ---
 
 class WorkerSignals(QObject):
     """
@@ -85,36 +168,32 @@ class Worker(QRunnable):
         except Exception as e:
             self.signals.error.emit(str(e))
 
-# --- 클릭 가능한 카드 위젯 ---
+# --- 카드 위젯 ---
 
 class ClickableCard(QLabel):
     """
     클릭 시 시그널을 방출하며, 263x383 비율을 유지하는 커스텀 QLabel
     """
-    clicked = pyqtSignal(object) # card_data를 방출
+    clicked = pyqtSignal(object) # card_data를 반환
 
     def __init__(self, card_data, size=150, parent=None):
         super(ClickableCard, self).__init__(parent)
         self.card_data = card_data # ("1.png", "키워드...")
         self.image_path = os.path.join("images", self.card_data[0])
         
-        # --- 수정된 비율 계산 로직 ---
-        # 원본 이미지 비율: 너비 263, 높이 383
+        # 이미지 사이즈
         CARD_WIDTH_RATIO = 263
         CARD_HEIGHT_RATIO = 383
-        
-        # 'size'를 새로운 너비(new_width)로 사용
+
         new_width = size
-        # 새로운 높이는 비율(383/263)에 맞춰 계산
+        # 비율(383/263)에 맞춰 계산
         new_height = int(new_width * (CARD_HEIGHT_RATIO / CARD_WIDTH_RATIO))
         
         self.setFixedSize(new_width, new_height)
-        # --- 수정된 비율 계산 로직 끝 ---
         
         if os.path.exists(self.image_path):
             pixmap = QPixmap(self.image_path)
             
-            # 픽스맵 스케일링 시, 계산된 new_width와 new_height 사용
             self.setPixmap(pixmap.scaled(new_width, new_height, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         else:
             self.setText(f"이미지 없음\n{self.card_data[0]}")
@@ -136,13 +215,14 @@ class ClickableCard(QLabel):
         else:
             self.setStyleSheet(self.normal_style)
 
-# --- 메인 게임 윈도우 ---
+
+# --- 메인 실행 화면 ---
 
 class GameWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Dixit 스타일 AI 게임")
-        self.setGeometry(100, 100, 1200, 900)
+        self.setWindowTitle("Dixit")
+        self.setGeometry(300, 300, 1200, 1200)
 
         # Ollama 클라이언트 초기화
         try:
@@ -159,7 +239,7 @@ class GameWindow(QMainWindow):
         self.start_new_game()
 
     def init_ui(self):
-        """UI의 기본 레이아웃을 설정합니다."""
+        # UI 기본 레이아웃 설정
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
@@ -209,8 +289,8 @@ class GameWindow(QMainWindow):
         self.set_description_input_enabled(False) # 처음엔 비활성화
         main_layout.addLayout(self.description_input_layout)
 
-        # 5. 플레이어1 손
-        self.hand_label = QLabel("당신의 손 (Player1)")
+        # 5. 플레이어1 hands
+        self.hand_label = QLabel("당신의 카드(Player1)")
         self.hand_label.setFont(QFont("Arial", 12))
         main_layout.addWidget(self.hand_label)
         
@@ -223,12 +303,12 @@ class GameWindow(QMainWindow):
         self.hand_scroll.setMinimumHeight(220)
         main_layout.addWidget(self.hand_scroll)
 
+    # --- 게임에 필요한 변수 초기화 ---
     def init_game_state(self):
-        """게임에 필요한 변수들을 초기화합니다."""
         self.image_text_set = set(image_text)
-        self.players = {f"Player{i+1}": set() for i in range(5)}
-        self.total_scores = {key: 0 for key in self.players.keys()}
-        self.player_order = list(self.players.keys())
+        self.players = {f"Player{i+1}": set() for i in range(5)}        # 플레이어 수
+        self.total_scores = {key: 0 for key in self.players.keys()}     # 총 점수
+        self.player_order = list(self.players.keys())                   
         self.current_turn_index = -1
         self.turn_number = 0
 
@@ -244,6 +324,7 @@ class GameWindow(QMainWindow):
         # AI 응답 매핑용 (투표 시 카드 -> 플레이어)
         self.vote_card_to_player_map = {}
 
+    # --- 게임 시작 ---
     def start_new_game(self):
         self.log("새 게임을 시작합니다.")
         # 3장씩 카드 분배
@@ -261,14 +342,12 @@ class GameWindow(QMainWindow):
         self.start_next_turn()
 
     def log(self, message):
-        """게임 로그에 메시지를 추가합니다."""
         self.log_display.append(message)
         QApplication.processEvents() # UI가 즉시 업데이트되도록 함
 
     # --- UI 업데이트 함수 ---
 
     def update_scoreboard_ui(self):
-        """스코어보드 UI를 현재 점수로 업데이트합니다."""
         # 레이아웃 비우기
         while self.scoreboard_layout.count():
             child = self.scoreboard_layout.takeAt(0)
@@ -308,7 +387,7 @@ class GameWindow(QMainWindow):
             if child.widget():
                 child.widget().deleteLater()
         
-        self.status_label.setText(f"설명: \"{self.current_description}\" | 투표하세요!")
+        self.status_label.setText(f"설명: \"{self.current_description}\" ...투표 진행중")
         
         # 카드를 섞어서 표시
         shuffled_players = list(self.turn_cards.keys())
@@ -324,7 +403,6 @@ class GameWindow(QMainWindow):
             # 맵핑: 카드 데이터 -> 플레이어 키
             self.vote_card_to_player_map[card_data] = player_key 
             
-            # --- 수정된 로직 ---
             if is_p1_voting:
                 # P1이 투표자일 경우
                 if player_key == "Player1":
@@ -337,7 +415,6 @@ class GameWindow(QMainWindow):
                 # P1이 턴 플레이어일 경우 (투표 안 함)
                 # 어떤 카드에도 클릭 이벤트를 연결하지 않습니다.
                 pass 
-            # --- 수정된 로직 끝 ---
 
             self.table_layout.addWidget(card_widget)
             self.submitted_card_widgets[player_key] = card_widget
@@ -487,14 +564,14 @@ class GameWindow(QMainWindow):
     def start_submission_phase(self):
         """턴 플레이어를 제외한 모든 플레이어가 카드를 제출하는 단계를 시작합니다."""
         self.game_state = "AWAITING_SUBMISSIONS"
-        self.status_label.setText(f"설명: \"{self.current_description}\" | 카드 제출 대기 중...")
+        self.status_label.setText(f"설명: \"{self.current_description}\" ...카드 제출 중")
         
         other_players = [p for p in self.players.keys() if p != self.turn_player]
         
         for player_key in other_players:
             if player_key == "Player1":
                 # Player1은 UI를 통해 직접 선택
-                self.log("당신의 차례: 설명에 가장 잘 맞는 카드를 손에서 선택하세요.")
+                self.log("가진 카드 중 설명에 가장 잘 맞는 카드를 선택하세요.")
                 # 손에 있는 카드들 선택 가능하게 (스타일 초기화)
                 for i in range(self.hand_layout.count()):
                     widget = self.hand_layout.itemAt(i).widget()
@@ -580,7 +657,7 @@ class GameWindow(QMainWindow):
             self.log("자신의 카드에는 투표할 수 없습니다.")
             return
             
-        self.log(f"Player1이 {voted_player_key}의 카드에 투표했습니다.")
+        self.log(f"Player1이 투표를 완료했습니다.")
         self.player_votes["Player1"] = voted_player_key # 투표 기록
         
         # 투표한 카드 하이라이트
@@ -674,7 +751,7 @@ class GameWindow(QMainWindow):
         voter_key, voted_player_key = result
         
         if voted_player_key:
-            self.log(f"{voter_key}가 {voted_player_key}의 카드에 투표했습니다.")
+            self.log(f"{voter_key}가 투표를 완료했습니다.")
             self.player_votes[voter_key] = voted_player_key
             
             # AI가 투표한 카드 UI에 표시 (선택 사항)
@@ -726,7 +803,7 @@ class GameWindow(QMainWindow):
         # 경우의 수에 따른 점수 부여
         if turn_player_votes == total_voters:
             # 모두가 맞힘
-            self.log("모두가 턴 플레이어의 카드를 맞혔습니다! (턴 플레이어 0점)")
+            self.log("모두가 턴 플레이어의 카드를 맞혔습니다. (턴 플레이어 0점)")
             for player_key in self.players:
                 if player_key != self.turn_player:
                     self.total_scores[player_key] += 2 # 맞힌 사람
@@ -734,7 +811,7 @@ class GameWindow(QMainWindow):
                     
         elif turn_player_votes == 0:
             # 아무도 못 맞힘
-            self.log("아무도 턴 플레이어의 카드를 맞히지 못했습니다! (턴 플레이어 0점)")
+            self.log("아무도 턴 플레이어의 카드를 맞히지 못했습니다. (턴 플레이어 0점)")
             for player_key in self.players:
                 if player_key != self.turn_player:
                     self.total_scores[player_key] += 2 # 다른 모든 사람
