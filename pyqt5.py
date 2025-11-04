@@ -217,15 +217,18 @@ class ClickableCard(QLabel):
 
 class QSS():
     MAIN_STYLE = """
-        QWidget {
-            border-image: url('styles/carpet_background.jpg') 0 0 0 0 stretch stretch;
-            background-repeat: no-repeat;
+            border-image: url('styles/main_background.jpg')0 0 0 0 stretch stretch; 
             background-position: center;
-        }
     """
     TITLE_IMAGE = """ 
             background-image: url('styles/main_background.jpg'); 
             background-position: center;
+    """
+
+    PLAYER_CARDS_BACKGROUND = """ Qwidget{
+            background-color: white; 
+            border: 1px solid black;
+            }
     """
 
 # --- 메인 실행 화면 ---
@@ -254,7 +257,7 @@ class GameWindow(QMainWindow):
     def init_ui(self):
         # UI 기본 레이아웃 설정
         main_widget = QWidget()
-        main_widget.setStyleSheet(QSS.MAIN_STYLE)
+        main_widget.setStyleSheet(QSS.PLAYER_CARDS_BACKGROUND)
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
 
@@ -272,7 +275,7 @@ class GameWindow(QMainWindow):
         # 이미지 제목 라벨
         self.game_title_label = QLabel("")
         self.game_title_label.setAlignment(Qt.AlignCenter)
-        self.game_title_label.setFont(QFont("Arial", 20, QFont.ExtraBold))
+        self.game_title_label.setFont(QFont("엘리스 디지털배움체", 20, QFont.ExtraBold))
         self.game_title_label.setStyleSheet(QSS.TITLE_IMAGE)
         
         title_image_layout.addWidget(self.game_title_label)
@@ -281,13 +284,14 @@ class GameWindow(QMainWindow):
         # 2. 게임 상태 및 로그
         status_layout = QHBoxLayout() # 이 변수는 아래에서 사용되지 않으므로 제거하거나 그대로 둘 수 있습니다.
         self.status_label = QLabel("게임을 시작합니다...")
-        self.status_label.setFont(QFont("Arial", 14, QFont.Bold))
+        self.status_label.setFont(QFont("엘리스 디지털배움체", 14, QFont.Bold))
         # status_layout.addWidget(self.status_label) # 이 부분은 아래 status_vlayout에 포함됨
         
         self.log_display = QTextEdit()
         self.log_display.setReadOnly(True)
         self.log_display.setFixedHeight(150)
-        
+        self.log_display.setFont(QFont("엘리스 디지털배움체", 10))
+
         status_vlayout = QVBoxLayout()
         status_vlayout.addWidget(self.status_label)
         status_vlayout.addWidget(self.log_display)
@@ -295,7 +299,7 @@ class GameWindow(QMainWindow):
 
         # 3. 테이블 (제출된 카드)
         self.table_label = QLabel("테이블")
-        self.table_label.setFont(QFont("Arial", 12))
+        self.table_label.setFont(QFont("엘리스 디지털배움체", 12))
         main_layout.addWidget(self.table_label)
         
         self.table_scroll = QScrollArea()
@@ -310,8 +314,11 @@ class GameWindow(QMainWindow):
         # 4. 플레이어1 입력 영역 (설명)
         self.description_input_layout = QHBoxLayout()
         self.description_label = QLabel("설명:")
+        self.description_label.setFont(QFont("엘리스 디지털배움체", 12))
         self.description_input = QLineEdit()
+        self.description_input.setFont(QFont("엘리스 디지털배움체", 12))
         self.description_submit_btn = QPushButton("설명 제출")
+        self.description_submit_btn.setFont(QFont("엘리스 디지털배움체", 12, QFont.Bold))
         self.description_submit_btn.clicked.connect(self.on_player1_description_submit)
         self.description_input_layout.addWidget(self.description_label)
         self.description_input_layout.addWidget(self.description_input)
@@ -321,12 +328,13 @@ class GameWindow(QMainWindow):
 
         # 5. 플레이어1 hands
         self.hand_label = QLabel("당신의 카드(Player1)")
-        self.hand_label.setFont(QFont("Arial", 12))
+        self.hand_label.setFont(QFont("엘리스 디지털배움체", 12))
         main_layout.addWidget(self.hand_label)
         
         self.hand_scroll = QScrollArea()
         self.hand_scroll.setWidgetResizable(True)
         self.hand_widget = QWidget()
+        self.hand_widget.setStyleSheet(QSS.PLAYER_CARDS_BACKGROUND)
         self.hand_layout = QHBoxLayout(self.hand_widget)
         self.hand_layout.setAlignment(Qt.AlignCenter)
         self.hand_scroll.setWidget(self.hand_widget)
@@ -386,7 +394,7 @@ class GameWindow(QMainWindow):
         
         for player, score in self.total_scores.items():
             label = QLabel(f"{player}: {score}점")
-            label.setFont(QFont("Arial", 12, QFont.Bold if player == "Player1" else QFont.Normal))
+            label.setFont(QFont("엘리스 디지털배움체", 12, QFont.Bold if player == "Player1" else QFont.Normal))
             label.setStyleSheet("border: 1px solid #ccc; padding: 5px; border-radius: 5px;")
             self.scoreboard_layout.addWidget(label)
 
