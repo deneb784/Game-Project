@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import (
     QLabel, QPushButton, QLineEdit, QScrollArea, 
     QMessageBox, QTextEdit, QFrame
 )
-from PyQt5.QtGui import QPixmap, QFont
+from PyQt5.QtGui import QPixmap, QFont, QPalette, QColor
 from PyQt5.QtCore import Qt, pyqtSignal, QObject, QThread, QRunnable, QThreadPool
 
 """ 
@@ -170,41 +170,81 @@ class Worker(QRunnable):
 
 # --- 카드 위젯 ---
 
+import os
+from PyQt5.QtWidgets import QLabel, QFrame
+from PyQt5.QtGui import QPixmap, QFont, QPainter, QBrush, QColor, QPainterPath
+from PyQt5.QtCore import pyqtSignal, Qt, QSize
+
 class ClickableCard(QLabel):
-    """
-    클릭 시 시그널을 방출하며, 263x383 비율을 유지하는 커스텀 QLabel
-    """
-    clicked = pyqtSignal(object) # card_data를 반환
+    clicked = pyqtSignal(object) 
 
     def __init__(self, card_data, size=150, parent=None):
         super(ClickableCard, self).__init__(parent)
-        self.card_data = card_data # ("1.png", "키워드...")
+        self.card_data = card_data
         self.image_path = os.path.join("images", self.card_data[0])
         
-        # 이미지 사이즈
         CARD_WIDTH_RATIO = 263
         CARD_HEIGHT_RATIO = 383
 
         new_width = size
-        # 비율(383/263)에 맞춰 계산
         new_height = int(new_width * (CARD_HEIGHT_RATIO / CARD_WIDTH_RATIO))
         
         self.setFixedSize(new_width, new_height)
         
+        self.border_radius = 10 # 원하는 둥글기 값
+
         if os.path.exists(self.image_path):
-            pixmap = QPixmap(self.image_path)
+            original_pixmap = QPixmap(self.image_path)
+            scaled_pixmap = original_pixmap.scaled(new_width, new_height, 
+                                                 Qt.KeepAspectRatio, Qt.SmoothTransformation)
             
-            self.setPixmap(pixmap.scaled(new_width, new_height, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            rounded_pixmap = self.create_rounded_pixmap(scaled_pixmap, self.border_radius)
+            self.setPixmap(rounded_pixmap)
         else:
             self.setText(f"이미지 없음\n{self.card_data[0]}")
-            self.setStyleSheet("border: 1px solid red;")
+            self.setStyleSheet("border: 1px solid red;") # 이미지가 없을 때의 스타일
             
         self.setScaledContents(False)
-        self.setFrameShape(QFrame.Box)
-        self.setLineWidth(1)
-        self.normal_style = f"border: 1px solid black; background-color: white;"
-        self.selected_style = f"border: 3px solid blue; background-color: lightblue;"
+
+        
+        self.normal_style = f"""
+            border: 10px solid white; 
+            background-color: white;
+            border-radius: {self.border_radius}px; 
+        """
+        self.selected_style = f"""
+            border: 7px solid blue; 
+            background-color: lightblue;
+            border-radius: {self.border_radius}px; 
+        """
+        
         self.setStyleSheet(self.normal_style)
+
+    def create_rounded_pixmap(self, pixmap, radius):
+        """
+        주어진 pixmap을 둥근 모서리로 마스킹하여 반환합니다.
+        """
+        # 새 Pixmap 생성 (알파 채널 포함)
+        rounded = QPixmap(pixmap.size())
+        rounded.fill(Qt.transparent) # 배경을 투명하게 채움
+
+        # QPainter를 사용하여 그리기
+        painter = QPainter(rounded)
+        painter.setRenderHint(QPainter.Antialiasing) # 안티앨리어싱 적용
+        painter.setRenderHint(QPainter.SmoothPixmapTransform) # 픽셀 변환 부드럽게
+
+        # 둥근 사각형 경로 생성
+        path = QPainterPath()
+        path.addRoundedRect(0, 0, pixmap.width(), pixmap.height(), radius, radius)
+        
+        # 경로 클리핑 (이 경로 안쪽만 그림)
+        painter.setClipPath(path)
+        
+        # 원본 이미지를 그림
+        painter.drawPixmap(0, 0, pixmap)
+        
+        painter.end()
+        return rounded
 
     def mousePressEvent(self, event):
         self.clicked.emit(self.card_data)
@@ -216,20 +256,46 @@ class ClickableCard(QLabel):
             self.setStyleSheet(self.normal_style)
 
 class QSS():
-    MAIN_STYLE = """
-            border-image: url('styles/main_background.jpg')0 0 0 0 stretch stretch; 
+    MAIN_STYLE = """ QWidget {
+            background-color: Blue;
+            background-repeat: repeat;
             background-position: center;
-    """
-    TITLE_IMAGE = """ 
-            background-image: url('styles/main_background.jpg'); 
-            background-position: center;
-    """
-
-    PLAYER_CARDS_BACKGROUND = """ Qwidget{
-            background-color: white; 
-            border: 1px solid black;
+            color: transparent;
             }
     """
+    TITLE_IMAGE = """ QWidget {
+            background-image: url('styles/Dixit_Cover copy.png');
+            background-repeat: no-repeat;
+            background-position: center;
+            color: transparent;
+            }
+    """
+
+    PLAYER_CARDS_BACKGROUND = """
+            border-image: url('styles/table_background.png') 0 0 0 0 stretch stretch;
+            background-position: center;
+            color: transparent;
+    """
+
+    GOLD_COLOR = "color: #dda668"
+
+    NEXT_BUTTON = """QPushButton {
+                    background-image: url('styles/white_background.png')
+                    border: 0px;
+                    min-height: 20px; 
+                    min-width: 50px; 
+                }
+    """
+    def background_palette(color=Qt.white):
+        """
+        메인 위젯의 배경색이 설정된 QPalette 객체를 반환합니다.
+        """
+        palette = QPalette()
+        
+        # QPalette.Window 역할에 지정된 색상을 설정합니다.
+        palette.setColor(QPalette.Window, QColor(color))
+        
+        return palette
 
 # --- 메인 실행 화면 ---
 
@@ -237,17 +303,17 @@ class GameWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Dixit")
-        self.setGeometry(300, 300, 1200, 1200)
+        self.setGeometry(300, 300, 1200, 1000)
 
         self.ollama_client = None
-        # # Ollama 클라이언트 초기화
-        # try:
-        #     self.ollama_client = ollama.Client(host=RUNPOD_OLLAMA_URL)
-        #     # 클라이언트 테스트
-        #     self.ollama_client.list() 
-        # except Exception as e:
-        #     QMessageBox.critical(self, "Ollama 연결 오류", f"Ollama 호스트({RUNPOD_OLLAMA_URL})에 연결할 수 없습니다. .env 파일과 RunPod 상태를 확인하세요.\n오류: {e}")
-        #     sys.exit(1)
+        # Ollama 클라이언트 초기화
+        try:
+            self.ollama_client = ollama.Client(host=RUNPOD_OLLAMA_URL)
+            # 클라이언트 테스트
+            self.ollama_client.list() 
+        except Exception as e:
+            QMessageBox.critical(self, "Ollama 연결 오류", f"Ollama 호스트({RUNPOD_OLLAMA_URL})에 연결할 수 없습니다. .env 파일과 RunPod 상태를 확인하세요.\n오류: {e}")
+            sys.exit(1)
 
         self.threadpool = QThreadPool()
         self.init_ui()
@@ -257,7 +323,6 @@ class GameWindow(QMainWindow):
     def init_ui(self):
         # UI 기본 레이아웃 설정
         main_widget = QWidget()
-        main_widget.setStyleSheet(QSS.PLAYER_CARDS_BACKGROUND)
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
 
@@ -267,16 +332,16 @@ class GameWindow(QMainWindow):
         
         # 이미지/제목 영역을 위한 컨테이너 위젯 (선택 사항이지만 구조를 깔끔하게 만듦)
         self.title_image_widget = QWidget()
-        self.title_image_widget.setFixedHeight(150) # 이미지 영역 높이 지정
+        self.title_image_widget.setFixedHeight(100) # 이미지 영역 높이 지정
+        self.title_image_widget.setStyleSheet(QSS.TITLE_IMAGE)
         main_layout.addWidget(self.title_image_widget)
         
         title_image_layout = QVBoxLayout(self.title_image_widget)
         
         # 이미지 제목 라벨
-        self.game_title_label = QLabel("")
+        self.game_title_label = QLabel()
         self.game_title_label.setAlignment(Qt.AlignCenter)
-        self.game_title_label.setFont(QFont("엘리스 디지털배움체", 20, QFont.ExtraBold))
-        self.game_title_label.setStyleSheet(QSS.TITLE_IMAGE)
+        self.game_title_label.setFont(QFont("HS산토끼체 2.0", 20, QFont.ExtraBold))
         
         title_image_layout.addWidget(self.game_title_label)
         # -----------------------------------------------------------------------------------
@@ -284,13 +349,14 @@ class GameWindow(QMainWindow):
         # 2. 게임 상태 및 로그
         status_layout = QHBoxLayout() # 이 변수는 아래에서 사용되지 않으므로 제거하거나 그대로 둘 수 있습니다.
         self.status_label = QLabel("게임을 시작합니다...")
-        self.status_label.setFont(QFont("엘리스 디지털배움체", 14, QFont.Bold))
+        self.status_label.setFont(QFont("HS산토끼체 2.0", 22, QFont.Bold))        
+        self.status_label.setAlignment(Qt.AlignCenter)
         # status_layout.addWidget(self.status_label) # 이 부분은 아래 status_vlayout에 포함됨
         
         self.log_display = QTextEdit()
         self.log_display.setReadOnly(True)
-        self.log_display.setFixedHeight(150)
-        self.log_display.setFont(QFont("엘리스 디지털배움체", 10))
+        self.log_display.setFixedHeight(100)
+        self.log_display.setFont(QFont("HS산토끼체 2.0", 10))
 
         status_vlayout = QVBoxLayout()
         status_vlayout.addWidget(self.status_label)
@@ -299,26 +365,30 @@ class GameWindow(QMainWindow):
 
         # 3. 테이블 (제출된 카드)
         self.table_label = QLabel("테이블")
-        self.table_label.setFont(QFont("엘리스 디지털배움체", 12))
+        self.table_label.setFont(QFont("HS산토끼체 2.0", 20))
+        self.table_label.setStyleSheet("color: #dda668")
+        self.table_label.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(self.table_label)
         
         self.table_scroll = QScrollArea()
         self.table_scroll.setWidgetResizable(True)
         self.table_widget = QWidget()
+        self.table_widget.setStyleSheet(QSS.PLAYER_CARDS_BACKGROUND)
         self.table_layout = QHBoxLayout(self.table_widget)
         self.table_layout.setAlignment(Qt.AlignCenter)
         self.table_scroll.setWidget(self.table_widget)
-        self.table_scroll.setMinimumHeight(220)
+        self.table_scroll.setMinimumHeight(270)
         main_layout.addWidget(self.table_scroll)
 
         # 4. 플레이어1 입력 영역 (설명)
         self.description_input_layout = QHBoxLayout()
         self.description_label = QLabel("설명:")
-        self.description_label.setFont(QFont("엘리스 디지털배움체", 12))
+        self.description_label.setFont(QFont("HS산토끼체 2.0", 20))
         self.description_input = QLineEdit()
-        self.description_input.setFont(QFont("엘리스 디지털배움체", 12))
+        self.description_input.setFont(QFont("HS산토끼체 2.0", 20))
+        self.description_input.setStyleSheet("color: #dda668")
         self.description_submit_btn = QPushButton("설명 제출")
-        self.description_submit_btn.setFont(QFont("엘리스 디지털배움체", 12, QFont.Bold))
+        self.description_submit_btn.setFont(QFont("HS산토끼체 2.0", 20, QFont.Bold))
         self.description_submit_btn.clicked.connect(self.on_player1_description_submit)
         self.description_input_layout.addWidget(self.description_label)
         self.description_input_layout.addWidget(self.description_input)
@@ -328,7 +398,9 @@ class GameWindow(QMainWindow):
 
         # 5. 플레이어1 hands
         self.hand_label = QLabel("당신의 카드(Player1)")
-        self.hand_label.setFont(QFont("엘리스 디지털배움체", 12))
+        self.hand_label.setFont(QFont("HS산토끼체 2.0", 20))
+        self.hand_label.setStyleSheet("color: #dda668")
+        self.hand_label.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(self.hand_label)
         
         self.hand_scroll = QScrollArea()
@@ -338,7 +410,7 @@ class GameWindow(QMainWindow):
         self.hand_layout = QHBoxLayout(self.hand_widget)
         self.hand_layout.setAlignment(Qt.AlignCenter)
         self.hand_scroll.setWidget(self.hand_widget)
-        self.hand_scroll.setMinimumHeight(220)
+        self.hand_scroll.setMinimumHeight(270)
         main_layout.addWidget(self.hand_scroll)
 
     # --- 게임에 필요한 변수 초기화 ---
@@ -366,7 +438,7 @@ class GameWindow(QMainWindow):
     def start_new_game(self):
         self.log("새 게임을 시작합니다.")
         # 3장씩 카드 분배
-        for _ in range(3):
+        for _ in range(5):
             for player_key in self.players:
                 if not self.image_text_set:
                     self.log("오류: 덱에 카드가 부족합니다.")
@@ -394,12 +466,24 @@ class GameWindow(QMainWindow):
         
         for player, score in self.total_scores.items():
             label = QLabel(f"{player}: {score}점")
-            label.setFont(QFont("엘리스 디지털배움체", 12, QFont.Bold if player == "Player1" else QFont.Normal))
-            label.setStyleSheet("border: 1px solid #ccc; padding: 5px; border-radius: 5px;")
+            label.setFont(QFont("HS산토끼체 2.0", 12, QFont.Bold if player == "Player1" else QFont.Normal))
+            label.setStyleSheet("color: Black;")
+            if score < 10 :
+                label.setStyleSheet("color: Black; background-color: lightblue; border: 1px solid #ccc; padding: 5px; border-radius: 5px;")
+            elif score < 20 :
+                label.setStyleSheet("color: Black; background-color: yellow; border: 1px solid #ccc; padding: 5px; border-radius: 5px;")
+            elif score < 25 :
+                label.setStyleSheet("background-color: orange; border: 1px solid #ccc; padding: 5px; border-radius: 5px;")
+            else :
+                label.setStyleSheet("background-color: red; border: 1px solid #ccc; padding: 5px; border-radius: 5px;")
             self.scoreboard_layout.addWidget(label)
 
     def display_player1_hand(self):
         """Player1의 손에 있는 카드를 UI에 표시합니다."""
+        hand_container = self.hand_layout.parentWidget() 
+        
+        if hand_container:
+            hand_container.setStyleSheet(QSS.PLAYER_CARDS_BACKGROUND)
         # 레이아웃 비우기
         while self.hand_layout.count():
             child = self.hand_layout.takeAt(0)
@@ -418,6 +502,7 @@ class GameWindow(QMainWindow):
         """테이블(제출된 카드) UI를 표시합니다."""
         self.submitted_card_widgets = {}
         self.vote_card_to_player_map = {}
+
         
         # 레이아웃 비우기
         while self.table_layout.count():
@@ -521,7 +606,6 @@ class GameWindow(QMainWindow):
                 widget = self.hand_layout.itemAt(i).widget()
                 if isinstance(widget, ClickableCard):
                     widget.set_selected(widget.card_data == card_data)
-            self.log(f"선택한 카드: {card_data[0]}")
 
         # 다른 플레이어의 턴일 때: 설명에 맞는 카드 제출
         elif self.game_state == "AWAITING_SUBMISSIONS":
@@ -529,7 +613,7 @@ class GameWindow(QMainWindow):
                 self.log("이미 카드를 제출했습니다.")
                 return
                 
-            self.log(f"Player1이 {card_data[0]} 카드를 제출합니다.")
+            self.log(f"Player1이 카드를 제출합니다.")
             self.players["Player1"].remove(card_data)
             self.turn_cards["Player1"] = [card_data, 0] # [카드, 투표 수]
             self.display_player1_hand() # UI에서 카드 제거
@@ -588,7 +672,7 @@ class GameWindow(QMainWindow):
 
     def on_ai_turn_complete(self, player_key, selected_card, description):
         """AI 턴 플레이어의 설명 생성이 완료되었을 때"""
-        self.log(f"{player_key}가 카드({selected_card[0]})를 선택했습니다.")
+        self.log(f"{player_key}가 카드를 선택했습니다.")
         self.log(f"{player_key}의 설명: \"{description}\"")
         
         self.current_description = description
@@ -627,7 +711,7 @@ class GameWindow(QMainWindow):
             self.check_all_cards_submitted() # 강제로 다음 단계로
             return
 
-        self.log(f"{player_key}가 설명에 맞는 카드를 고르는 중...")
+        self.log(f"{player_key}가 설명에 맞는 카드를 고르는 중... ")
         
         worker = Worker(self.select_similar_card, user_cards, description)
         worker.signals.finished.connect(
@@ -859,7 +943,7 @@ class GameWindow(QMainWindow):
             card_data, votes = self.turn_cards[player_key]
             label_text = f"{player_key}의 카드 ({votes}표)\n{card_data[0]}"
             # (간단하게) 툴팁으로 키워드 표시
-            widget.setToolTip(f"키워드: {card_data[1]}")
+            # widget.setToolTip(f"키워드: {card_data[1]}")
             # 또는 위젯을 수정하여 라벨을 추가할 수 있음
         
         # 경우의 수에 따른 점수 부여
@@ -903,14 +987,14 @@ class GameWindow(QMainWindow):
         self.update_scoreboard_ui()
         self.log(f"현재 총점: {self.total_scores}")
         
-        # 3초간 결과 표시 후 다음 턴
         self.game_state = "ROUND_END"
-        # QTimer.singleShot(3000, self.end_round) # -> 스레드 문제로 복잡해짐
         
         # 간단하게 버튼으로 대체
         self.next_turn_btn = QPushButton("다음 턴으로")
+        self.next_turn_btn.setFont(QFont("HS산토끼체 2.0", 20, QFont.Bold))
+        self.next_turn_btn.setStyleSheet(QSS.NEXT_BUTTON)
         self.next_turn_btn.clicked.connect(self.end_round)
-        self.table_layout.addWidget(self.next_turn_btn)
+        self.description_input_layout.addWidget(self.next_turn_btn)
 
     def end_round(self):
         """라운드를 종료하고 다음 턴을 준비합니다."""
@@ -985,7 +1069,7 @@ class GameWindow(QMainWindow):
                 1. 문장은 **매우 짧아야 해.** (예: 10단어 내외)
                 2. **제시된 단어를 절대 직접 사용하면 안 돼.** (매우 중요)
                 3. 문장은 구체적인 이야기보다 '상태'나 '감정'처럼 느껴져야 해.
-                4. 콤마(,)는 1개 이하만 사용해.
+                4. 서로 관련이 있는 일부 단어만 선택해서 묘사해야해.
 
                 단어 예시: 하늘, 망치, 조각, 예술, 새, 나비, 구름, 사다리, 남자
                 출력 예시: "가장 무거운 것은 날개가 되기를 꿈꾼다."
@@ -1113,11 +1197,28 @@ class GameWindow(QMainWindow):
         # 이 함수를 호출한 쪽(on_ai_card_selected)에서 손(players)을 수정합니다.
         return selected_card, user_cards
 
+def set_light_theme(app):
+    """표준 라이트 모드 색상 팔레트를 설정합니다."""
+    light_palette = QPalette()
 
+    # 표준 라이트 모드 색상 설정
+    light_palette.setColor(QPalette.Window, QColor(0,0,0)) # 일반 배경 (옅은 회색)
+    light_palette.setColor(QPalette.WindowText, Qt.white)          # 일반 텍스트
+    light_palette.setColor(QPalette.Base, QColor(30, 30, 30))               # 입력 필드, 리스트 배경
+    light_palette.setColor(QPalette.Text, Qt.white)               # 입력 필드 텍스트
+    light_palette.setColor(QPalette.Button, QColor(0,0,0)) # 버튼 배경
+    light_palette.setColor(QPalette.ButtonText, Qt.white)         # 버튼 텍스트
+    light_palette.setColor(QPalette.Highlight, QColor(0, 120, 215)) # 하이라이트 배경
+    light_palette.setColor(QPalette.HighlightedText, Qt.white)    # 하이라이트 텍스트
+
+    app.setPalette(light_palette)
+    # macOS에서 크로스 플랫폼 표준인 "Fusion" 스타일을 적용합니다.
+    app.setStyle("Fusion")
 # --- 애플리케이션 실행 ---
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    set_light_theme(app)
     window = GameWindow()
     window.show()
     sys.exit(app.exec_())
