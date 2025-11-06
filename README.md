@@ -4,6 +4,11 @@
 ## 게임 기획
 
 꿈 속 세상처럼 추상적이고 모호한 그림을 보고 해당 그림에 대해 설명해나가는 Dixit 보드게임을, 사용자가 AI와 대결할 수 있도록 구현하였다.
+ <div align="center">
+    <img src="./styles/Dixit_game_image.png" alt="Dixit" style="max-width: 100%; height: auto; margin-bottom: 20px;"/>  
+    <br>
+    <i> Dixit 게임 </i>
+</div>
 
 ## 게임 규칙 및 설명
 
@@ -29,5 +34,12 @@
 9. 2~8번의 과정을 30점이 넘는 플레이어가 나올때까지 진행한다.
 
 ---
-### 구현 과정
+### 시연
+   
+
+
+      
+---
+
+
 
