@@ -4,6 +4,7 @@
 ## 게임 기획
 
 추상적이고 모호한 그림을 보고 해당 그림에 대해 설명해나가는 Dixit 보드게임을, 사용자가 AI와 대결할 수 있도록 구현하였다.  
+AI 구현에 사용된 모델은 Ollama EEVE, UI 구현은 PyQt5를 사용하였다.
   
  <div align="center">
     <img src="./styles/Dixit_game_image.jpg" alt="Dixit" style="max-width: 60%; height: auto; margin-bottom: 20px;"/>  
